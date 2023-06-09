@@ -1,0 +1,15 @@
+-I
+./src/
+-I
+./STM32CubeF7/Drivers/CMSIS/Include/
+-I
+./STM32CubeF7/Drivers/CMSIS/Device/ST/STM32F7xx/Include/
+-I
+./STM32CubeF7/Drivers/STM32F7xx_HAL_Driver/Inc/
+-I
+./STM32CubeF7/Drivers/BSP/STM32F7xx_Nucleo_144/
+-I
+./STM32CubeF7/Middlewares/Third_Party/FatFs/src/
+-DSTM32
+-DSTM32F7
+-DSTM32F767xx

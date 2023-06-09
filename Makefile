@@ -12,11 +12,18 @@ FLASH_OFFSET=0x08000000
 SOURCES_S = ${CUBE_PATH}/Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc/startup_stm32f767xx.s
 
 SOURCES_C = src/main.c
+SOURCES_C += src/stm32f7xx_it.c
 
 SOURCES_C += sys/stubs.c sys/_sbrk.c
 SOURCES_C += ${CUBE_PATH}/Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/system_stm32f7xx.c
 SOURCES_C += ${CUBE_PATH}/Drivers/BSP/STM32F7xx_Nucleo_144/stm32f7xx_nucleo_144.c
+SOURCES_C += ${CUBE_PATH}/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal.c
+SOURCES_C += ${CUBE_PATH}/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_cortex.c
+SOURCES_C += ${CUBE_PATH}/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_rcc.c
 SOURCES_C += ${CUBE_PATH}/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_gpio.c
+SOURCES_C += ${CUBE_PATH}/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_uart.c
+SOURCES_C += ${CUBE_PATH}/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c
+SOURCES_C += ${CUBE_PATH}/Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr_ex.c
 
 SOURCES_CPP =
 
@@ -82,39 +89,22 @@ LDFLAGS += -L ${CUBE_PATH}/Projects/STM32F767ZI-Nucleo/Demonstrations/SW4STM32/S
 ################
 # phony rules
 
-.PHONY: all clean flash erase
+.PHONY: all clean flash program erase
 
 all: $(PROJECT).bin $(PROJECT).hex $(PROJECT).asm
 
 clean:
 	$(RM) $(OBJS) $(OBJS:$.o=$.lst) $(OBJS:$.o=$.su) $(PROJECT).elf $(PROJECT).bin $(PROJECT).hex $(PROJECT).map $(PROJECT).asm
 
-BMP_DEVICE ?= /dev/ttyACM0
-JLINK_CPUNAME ?= STM32F737ZI
-flash-bmp: $(PROJECT).elf
-	# assuming:
-	#  * Black Magic Probe connected to $(BMP_DEVICE)
-	#  * compatible board connected via SWD
-	$(GDB) $(PROJECT).elf \
-		-ex 'set confirm off' \
-		-ex 'target extended-remote $(BMP_DEVICE)' \
-		-ex 'mon hard_srst' \
-		-ex 'mon swdp_scan' \
-		-ex 'attach 1' \
-		-ex 'load' \
-		-ex 'compare-sections' \
-		-ex 'quit'
+flash:
+program:
+	st-flash write $(PROJECT).bin $(FLASH_OFFSET)
+	st-flash reset
 
-flash-jlink: $(PROJECT).bin
-	# assuming:
-	#  * any type of Segger JLINK that is usable with an STM32
-	#    (e.g. the embedded jlink on the DK)
-	#  * compatible board connected via SWD
-	#  * installed JLink Software
-	printf "erase\nloadfile $< ${FLASH_OFFSET}\nr\nq\n" | JLinkExe -nogui 1 -autoconnect 1 -device $(JLINK_CPUNAME) -if swd -speed 4000
-
-erase-jlink:
-	printf "erase\nr\nq\n" | JLinkExe -nogui 1 -autoconnect 1 -device $(JLINK_CPUNAME) -if swd -speed 4000
+erase:
+	st-flash erase
+	st-flash reset
+	
 
 ################
 # dependency graphs for wildcard rules

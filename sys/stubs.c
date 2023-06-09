@@ -1,11 +1,13 @@
-
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-
 extern int errno;
+extern int __io_putchar(int ch) __attribute__((weak));
 
-int _write(int fd, const void *buffer, unsigned int count)
+int _write(int fd, char *buffer, unsigned int count)
 {
-    return -1;
+	int DataIdx;
+	for (unsigned int i = 0; i < count; i++) {
+		__io_putchar(*buffer++);
+	}
+	return count;
 }
 
 int _read(int fd, void *buffer, unsigned int count)
@@ -31,6 +33,14 @@ int _isatty(int fd)
 long _lseek(int fd, long offset, int origin)
 {
     return -1;
+}
+
+int _getpid(void) {
+	return -1;
+}
+
+int _kill(void) {
+	return -1;
 }
 
 void _exit(int status)
