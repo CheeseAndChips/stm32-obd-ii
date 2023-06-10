@@ -1,9 +1,8 @@
 #include <stdio.h>
+#include <string.h>
 
-#include "stm32f7xx_hal_gpio.h"
-#include "stm32f7xx_it.h"
-#include "stm32f7xx_hal_conf.h"
 #include "stm32f7xx_nucleo_144.h"
+#include "stm32f7xx_hal_conf.h"
 #include "stm32f7xx_hal.h"
 
 UART_HandleTypeDef h_uart3;
@@ -11,6 +10,7 @@ UART_HandleTypeDef h_uart3;
 static void uart_init(void);
 static void error_handler(void);
 static void SystemClock_Config(void);
+static void wait_for_input(void);
 
 int main(void)
 {
@@ -23,11 +23,9 @@ int main(void)
 	BSP_LED_Init(LED3);
 	uart_init();
 
-	printf("Hello, world!\n");
-
 	while(1) {
-		BSP_LED_Toggle(LED1);
-		HAL_Delay(100);
+		printf("Waiting for some input...\n");
+		wait_for_input();
 	}
 
 	return 0;
@@ -36,6 +34,14 @@ int main(void)
 int __io_putchar(int ch) {
 	HAL_UART_Transmit(&h_uart3, (uint8_t *)&ch, 1, 0xffff);
 	return ch;
+}
+
+static void wait_for_input(void) {
+	uint8_t buffer[16];
+	do {
+		memset(buffer, 0, sizeof(buffer));
+		HAL_UART_Receive(&h_uart3, buffer, sizeof(buffer), 100);
+	} while(!buffer[0]);
 }
 
 static void uart_init(void) {
@@ -63,9 +69,9 @@ static void uart_init(void) {
 		error_handler();
 	}
 
-	HAL_NVIC_SetPriority(USART3_IRQn, 0, 1);
-	HAL_NVIC_EnableIRQ(USART3_IRQn);
-	__HAL_UART_ENABLE_IT(&h_uart3, UART_IT_RXNE);
+	//HAL_NVIC_SetPriority(USART3_IRQn, 0, 1);
+	//HAL_NVIC_EnableIRQ(USART3_IRQn);
+	//__HAL_UART_ENABLE_IT(&h_uart3, UART_IT_RXNE);
 }
 
 static void SystemClock_Config(void) {

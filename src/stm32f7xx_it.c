@@ -23,6 +23,8 @@
 #include "stm32f7xx_it.h"
 #include "stm32f7xx_nucleo_144.h"
 
+extern UART_HandleTypeDef h_uart3;
+
 /** @addtogroup STM32F7xx_HAL_Examples
   * @{
   */
@@ -157,6 +159,9 @@ void EXTI15_10_IRQHandler(void)
   HAL_GPIO_EXTI_IRQHandler(USER_BUTTON_PIN);
 }
 
+void USART3_IRQHandler(void) {
+	HAL_UART_IRQHandler(&h_uart3);
+}
 
 /**
   * @}
