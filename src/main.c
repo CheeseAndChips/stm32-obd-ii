@@ -6,11 +6,16 @@
 #include "stm32f7xx_hal.h"
 
 UART_HandleTypeDef h_uart3;
+CAN_HandleTypeDef h_can1;
 
 static void uart_init(void);
 static void error_handler(void);
 static void SystemClock_Config(void);
 static void wait_for_input(void);
+static void can_init(void);
+
+uint32_t TxMailbox;
+uint32_t RxMailbox;
 
 int main(void)
 {
@@ -22,10 +27,33 @@ int main(void)
 	BSP_LED_Init(LED2);
 	BSP_LED_Init(LED3);
 	uart_init();
+	can_init();
 
+	HAL_CAN_Start(&h_can1);
 	while(1) {
-		printf("Waiting for some input...\n");
+		CAN_TxHeaderTypeDef header;
+		header.StdId = 0x69;
+		header.IDE = CAN_ID_STD;
+		header.RTR = CAN_RTR_DATA;
+		header.DLC = 2;
+		header.TransmitGlobalTime = DISABLE;
+
+		uint8_t data[0x10];
+		for(int i = 0; i < 0x10; i++) {
+			data[i] = 0x10 | i;
+		}
+		//printf("RX fifo %u before\n", HAL_CAN_GetRxFifoFillLevel(&h_can1, RxMailbox));
+		printf("VWaiting for input...\n");
 		wait_for_input();
+		HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&h_can1, &header, data, &TxMailbox);
+		printf("Pending: %u\n", HAL_CAN_IsTxMessagePending(&h_can1, TxMailbox));
+		HAL_Delay(10);
+		printf("Pending: %u\n", HAL_CAN_IsTxMessagePending(&h_can1, TxMailbox));
+		if(status != HAL_OK) {
+			printf("Failed sending\n");
+			error_handler();
+		}
+		//printf("RX fifo %u after\n", HAL_CAN_GetRxFifoFillLevel(&h_can1, ));
 	}
 
 	return 0;
@@ -72,6 +100,47 @@ static void uart_init(void) {
 	//HAL_NVIC_SetPriority(USART3_IRQn, 0, 1);
 	//HAL_NVIC_EnableIRQ(USART3_IRQn);
 	//__HAL_UART_ENABLE_IT(&h_uart3, UART_IT_RXNE);
+}
+
+static void can_init(void) {
+	__HAL_RCC_CAN1_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+
+	GPIO_InitTypeDef gpio;
+    /**CAN GPIO Configuration
+    PB8     ------> CAN_RX
+    PB9     ------> CAN_TX
+    */
+    gpio.Pin = GPIO_PIN_8;
+    gpio.Mode = GPIO_MODE_INPUT;
+    gpio.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOB, &gpio);
+
+    gpio.Pin = GPIO_PIN_9;
+    gpio.Mode = GPIO_MODE_AF_PP;
+    gpio.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(GPIOA, &gpio);
+
+	h_can1.Instance = CAN1;
+	h_can1.Init.Prescaler = 8;
+	h_can1.Init.Mode = CAN_MODE_NORMAL;
+	h_can1.Init.SyncJumpWidth = CAN_SJW_1TQ;
+	h_can1.Init.TimeSeg1 = CAN_BS1_1TQ;
+	h_can1.Init.TimeSeg2 = CAN_BS2_2TQ;
+	h_can1.Init.TimeTriggeredMode = DISABLE;
+	h_can1.Init.AutoBusOff = DISABLE;
+	h_can1.Init.AutoWakeUp = DISABLE;
+	h_can1.Init.AutoRetransmission = DISABLE;
+	h_can1.Init.ReceiveFifoLocked = DISABLE;
+	h_can1.Init.TransmitFifoPriority = DISABLE;
+	if (HAL_CAN_Init(&h_can1) != HAL_OK)
+	{
+		error_handler();
+	} 
+
+	CAN_FilterTypeDef config;
+	config.FilterActivation = DISABLE;
+	HAL_CAN_ConfigFilter(&h_can1, &config);
 }
 
 static void SystemClock_Config(void) {
